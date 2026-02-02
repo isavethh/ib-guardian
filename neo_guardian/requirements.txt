@@ -1,0 +1,42 @@
+# NEO Guardian - Dependencias
+# Sistema de Monitoreo de Asteroides con Ciberseguridad
+
+# Framework Web
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Seguridad y Autenticación
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+cryptography==42.0.0
+argon2-cffi==23.1.0
+
+# Base de datos
+sqlalchemy==2.0.25
+aiosqlite==0.19.0
+
+# HTTP Client para NASA API
+httpx==0.26.0
+aiohttp==3.9.1
+
+# Validación y Sanitización
+pydantic==2.5.3
+pydantic-settings==2.1.0
+bleach==6.1.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Seguridad Headers
+secure==0.3.0
+
+# Logging y Monitoreo
+python-json-logger==2.0.7
+structlog==24.1.0
+
+# Variables de entorno
+python-dotenv==1.0.0
+
+# Utilidades
+email-validator==2.1.0
