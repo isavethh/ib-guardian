@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💥 NEO Guardian - Simulador de Impactos</title>
+    
+    <!-- Three.js for 3D visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        #impact-canvas {
+            width: 100%;
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .comparison-bar {
+            height: 24px;
+            border-radius: 4px;
+            transition: width 0.5s ease-out;
+        }
+        
+        .historical-card {
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .historical-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .crater-visual {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            background: radial-gradient(circle, #4a2700 0%, #2a1800 50%, #1a1000 100%);
+            border-radius: 50%;
+            overflow: hidden;
+        }
+        
+        .crater-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 150, 50, 0.3);
+        }
+        
+        .effect-meter {
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #22c55e 0%, #eab308 50%, #ef4444 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .effect-indicator {
+            position: absolute;
+            width: 4px;
+            height: 16px;
+            background: white;
+            top: -4px;
+            border-radius: 2px;
+            transition: left 0.5s ease-out;
+        }
+        
+        @keyframes shockwave {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(4); opacity: 0; }
+        }
+        
+        @keyframes debris {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(0); opacity: 0; }
+        }
+        
+        .animate-impact .shockwave {
+            animation: shockwave 2s ease-out;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <!-- Navigation -->
+    <nav class="glass rounded-2xl p-4 mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="/static/index.html" class="text-3xl hover:scale-110 transition">🚀</a>
+            <div>
+                <h1 class="font-orbitron text-xl md:text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+                    Simulador de Impactos
+                </h1>
+                <p class="text-gray-400 text-sm">Visualiza los efectos de impactos de asteroides</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <a href="/static/solar-system.html" class="px-4 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 transition text-sm">
+                🌍 Vista 3D
+            </a>
+            <a href="/static/education.html" class="px-4 py-2 rounded-lg bg-green-600/30 hover:bg-green-600/50 transition text-sm">
+                📚 Aprender
+            </a>
+        </div>
+    </nav>
+    
+    <div class="grid lg:grid-cols-2 gap-6">
+        <!-- Left Column: Simulator Controls -->
+        <div class="space-y-6">
+            <!-- Simulation Parameters -->
+            <div class="glass rounded-2xl p-6">
+                <h2 class="font-orbitron text-lg font-bold mb-4 flex items-center gap-2">
+                    <span>⚙️</span> Parámetros del Asteroide
+                </h2>
+                
+                <div class="space-y-6">
+                    <!-- Diameter -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm text-gray-400">Diámetro</label>
+                            <span id="diameter-value" class="font-mono text-orange-400">100 m</span>
+                        </div>
+                        <input type="range" id="diameter" min="1" max="5000" value="100" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                               oninput="updateSimulation()">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>1 m</span>
+                            <span>5 km</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Velocity -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm text-gray-400">Velocidad de Impacto</label>
+                            <span id="velocity-value" class="font-mono text-orange-400">20 km/s</span>
+                        </div>
+                        <input type="range" id="velocity" min="5" max="72" value="20" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                               oninput="updateSimulation()">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>5 km/s</span>
+                            <span>72 km/s (máx)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Angle -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm text-gray-400">Ángulo de Entrada</label>
+                            <span id="angle-value" class="font-mono text-orange-400">45°</span>
+                        </div>
+                        <input type="range" id="angle" min="10" max="90" value="45" 
+                               class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                               oninput="updateSimulation()">
+                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                            <span>10° (rasante)</span>
+                            <span>90° (vertical)</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Density -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm text-gray-400">Tipo de Asteroide</label>
+                            <span id="density-value" class="font-mono text-orange-400">Rocoso (3000 kg/m³)</span>
+                        </div>
+                        <select id="density" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                onchange="updateSimulation()">
+                            <option value="1500">Poroso (1500 kg/m³)</option>
+                            <option value="2500">Carbonáceo (2500 kg/m³)</option>
+                            <option value="3000" selected>Rocoso (3000 kg/m³)</option>
+                            <option value="5000">Metálico (5000 kg/m³)</option>
+                            <option value="8000">Hierro sólido (8000 kg/m³)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Impact Location -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm text-gray-400">Ubicación del Impacto</label>
+                        </div>
+                        <select id="location" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+                                onchange="updateSimulation()">
+                            <option value="land">🏔️ Tierra (continente)</option>
+                            <option value="ocean">🌊 Océano</option>
+                            <option value="city">🏙️ Área urbana</option>
+                            <option value="desert">🏜️ Desierto</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button onclick="runSimulation()" 
+                        class="w-full mt-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 rounded-xl font-bold transition-all transform hover:scale-[1.02]">
+                    💥 SIMULAR IMPACTO
+                </button>
+            </div>
+            
+            <!-- Quick Presets -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="font-semibold mb-4">🎯 Comparar con Impactos Históricos</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="loadHistorical('chelyabinsk')" 
+                            class="historical-card glass px-4 py-3 rounded-xl text-left hover:bg-white/10">
+                        <div class="text-2xl mb-1">☄️</div>
+                        <div class="font-semibold text-sm">Chelyabinsk</div>
+                        <div class="text-xs text-gray-400">2013 - 20m</div>
+                    </button>
+                    <button onclick="loadHistorical('tunguska')" 
+                            class="historical-card glass px-4 py-3 rounded-xl text-left hover:bg-white/10">
+                        <div class="text-2xl mb-1">💥</div>
+                        <div class="font-semibold text-sm">Tunguska</div>
+                        <div class="text-xs text-gray-400">1908 - 60m</div>
+                    </button>
+                    <button onclick="loadHistorical('barringer')" 
+                            class="historical-card glass px-4 py-3 rounded-xl text-left hover:bg-white/10">
+                        <div class="text-2xl mb-1">🕳️</div>
+                        <div class="font-semibold text-sm">Cráter Barringer</div>
+                        <div class="text-xs text-gray-400">50,000 años - 50m</div>
+                    </button>
+                    <button onclick="loadHistorical('chicxulub')" 
+                            class="historical-card glass px-4 py-3 rounded-xl text-left hover:bg-white/10">
+                        <div class="text-2xl mb-1">🦖</div>
+                        <div class="font-semibold text-sm">Chicxulub</div>
+                        <div class="text-xs text-gray-400">66M años - 10km</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column: Results -->
+        <div class="space-y-6">
+            <!-- Impact Visualization -->
+            <div class="glass rounded-2xl p-6">
+                <h2 class="font-orbitron text-lg font-bold mb-4 flex items-center gap-2">
+                    <span>🌍</span> Visualización del Impacto
+                </h2>
+                <div id="impact-canvas"></div>
+            </div>
+            
+            <!-- Results Cards -->
+            <div id="results-section" class="space-y-4 hidden">
+                <!-- Energy Card -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <span class="text-yellow-400">⚡</span> Energía del Impacto
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center p-4 bg-yellow-500/10 rounded-xl">
+                            <div id="energy-joules" class="font-orbitron text-2xl text-yellow-400">--</div>
+                            <div class="text-xs text-gray-400 mt-1">Joules</div>
+                        </div>
+                        <div class="text-center p-4 bg-orange-500/10 rounded-xl">
+                            <div id="energy-mt" class="font-orbitron text-2xl text-orange-400">--</div>
+                            <div class="text-xs text-gray-400 mt-1">Megatones TNT</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <div class="text-sm text-gray-400 mb-2">Comparación con armas nucleares:</div>
+                        <div id="nuclear-comparison" class="text-sm text-white"></div>
+                    </div>
+                </div>
+                
+                <!-- Crater Card -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <span class="text-amber-400">🕳️</span> Cráter Resultante
+                    </h3>
+                    <div class="flex items-center gap-6">
+                        <div class="crater-visual w-32 h-32 flex-shrink-0" id="crater-visual">
+                            <!-- Crater rings will be added here -->
+                        </div>
+                        <div class="space-y-3 flex-1">
+                            <div>
+                                <div class="text-gray-400 text-xs">Diámetro del cráter</div>
+                                <div id="crater-diameter" class="font-orbitron text-xl text-amber-400">--</div>
+                            </div>
+                            <div>
+                                <div class="text-gray-400 text-xs">Profundidad</div>
+                                <div id="crater-depth" class="font-orbitron text-xl text-amber-400">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Effects Card -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <span class="text-red-400">🔥</span> Efectos del Impacto
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <!-- Fireball -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Radio de bola de fuego</span>
+                                <span id="fireball-radius" class="text-red-400">--</span>
+                            </div>
+                            <div class="effect-meter">
+                                <div id="fireball-indicator" class="effect-indicator"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Thermal Radiation -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Radiación térmica (quemaduras)</span>
+                                <span id="thermal-radius" class="text-orange-400">--</span>
+                            </div>
+                            <div class="effect-meter">
+                                <div id="thermal-indicator" class="effect-indicator"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Shockwave -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Onda expansiva (destrucción)</span>
+                                <span id="shockwave-radius" class="text-yellow-400">--</span>
+                            </div>
+                            <div class="effect-meter">
+                                <div id="shockwave-indicator" class="effect-indicator"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Earthquake -->
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span class="text-gray-400">Magnitud sísmica equivalente</span>
+                                <span id="earthquake-mag" class="text-purple-400">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Casualties Estimation -->
+                <div class="glass rounded-2xl p-6 border-l-4 border-red-500">
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <span>⚠️</span> Estimación de Daños
+                    </h3>
+                    <div id="damage-description" class="text-gray-300 text-sm leading-relaxed">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Historical Impacts Section -->
+    <div class="mt-8">
+        <h2 class="font-orbitron text-2xl font-bold mb-6 text-center">
+            📜 Impactos Históricos Documentados
+        </h2>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4" id="historical-grid">
+            <!-- Filled by JS -->
+        </div>
+    </div>
+    
+    <!-- Comparison Chart -->
+    <div class="mt-8 glass rounded-2xl p-6">
+        <h2 class="font-orbitron text-lg font-bold mb-4">📊 Comparación de Energía de Impactos</h2>
+        <div class="h-80">
+            <canvas id="comparison-chart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // NEO Guardian - Impact Simulator
+        // =====================================================
+        
+        const API_BASE = 'http://localhost:8000/api/v1';
+        let impactScene, impactCamera, impactRenderer, impactControls;
+        let earth3D, impactPoint;
+        let comparisonChart;
+        
+        // Historical impacts data
+        const HISTORICAL_IMPACTS = {
+            chicxulub: { diameter: 10000, velocity: 20, angle: 60, density: 3000 },
+            tunguska: { diameter: 60, velocity: 15, angle: 30, density: 2500 },
+            chelyabinsk: { diameter: 20, velocity: 19, angle: 18, density: 3500 },
+            barringer: { diameter: 50, velocity: 12.8, angle: 45, density: 8000 }
+        };
+        
+        // Initialize 3D visualization
+        function init3D() {
+            const container = document.getElementById('impact-canvas');
+            
+            // Scene
+            impactScene = new THREE.Scene();
+            impactScene.background = new THREE.Color(0x000011);
+            
+            // Camera
+            impactCamera = new THREE.PerspectiveCamera(50, container.clientWidth / 400, 0.1, 1000);
+            impactCamera.position.set(0, 2, 5);
+            
+            // Renderer
+            impactRenderer = new THREE.WebGLRenderer({ antialias: true });
+            impactRenderer.setSize(container.clientWidth, 400);
+            container.appendChild(impactRenderer.domElement);
+            
+            // Controls
+            impactControls = new THREE.OrbitControls(impactCamera, impactRenderer.domElement);
+            impactControls.enableDamping = true;
+            impactControls.minDistance = 2;
+            impactControls.maxDistance = 10;
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            impactScene.add(ambientLight);
+            
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1);
+            sunLight.position.set(5, 3, 5);
+            impactScene.add(sunLight);
+            
+            // Earth
+            const earthGeometry = new THREE.SphereGeometry(2, 64, 64);
+            const earthMaterial = new THREE.MeshPhongMaterial({
+                color: 0x2266ff,
+                specular: 0x333333,
+                shininess: 5
+            });
+            earth3D = new THREE.Mesh(earthGeometry, earthMaterial);
+            impactScene.add(earth3D);
+            
+            // Add continents (simplified green patches)
+            const landMaterial = new THREE.MeshPhongMaterial({ color: 0x22aa44 });
+            for (let i = 0; i < 5; i++) {
+                const landGeometry = new THREE.SphereGeometry(2.01, 16, 16, 
+                    Math.random() * Math.PI, Math.PI * 0.3 + Math.random() * 0.3,
+                    Math.random() * Math.PI * 0.5 + 0.3, Math.PI * 0.2 + Math.random() * 0.3
+                );
+                const land = new THREE.Mesh(landGeometry, landMaterial);
+                earth3D.add(land);
+            }
+            
+            // Atmosphere
+            const atmosphereGeometry = new THREE.SphereGeometry(2.1, 64, 64);
+            const atmosphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x88ccff,
+                transparent: true,
+                opacity: 0.15,
+                side: THREE.BackSide
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            impactScene.add(atmosphere);
+            
+            // Stars
+            const starGeometry = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 1000; i++) {
+                const x = (Math.random() - 0.5) * 100;
+                const y = (Math.random() - 0.5) * 100;
+                const z = (Math.random() - 0.5) * 100;
+                starVertices.push(x, y, z);
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1 });
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            impactScene.add(stars);
+            
+            // Animate
+            function animate() {
+                requestAnimationFrame(animate);
+                earth3D.rotation.y += 0.002;
+                impactControls.update();
+                impactRenderer.render(impactScene, impactCamera);
+            }
+            animate();
+            
+            // Resize handler
+            window.addEventListener('resize', () => {
+                impactCamera.aspect = container.clientWidth / 400;
+                impactCamera.updateProjectionMatrix();
+                impactRenderer.setSize(container.clientWidth, 400);
+            });
+        }
+        
+        function createImpactEffect(energy) {
+            // Remove previous impact point
+            if (impactPoint) {
+                impactScene.remove(impactPoint);
+            }
+            
+            // Scale based on energy (log scale)
+            const impactSize = Math.min(0.5, Math.log10(energy) / 30);
+            
+            // Impact point
+            const impactGeometry = new THREE.SphereGeometry(impactSize, 16, 16);
+            const impactMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff4400,
+                emissive: 0xff4400
+            });
+            impactPoint = new THREE.Mesh(impactGeometry, impactMaterial);
+            
+            // Position on Earth surface
+            const lat = (Math.random() - 0.5) * Math.PI;
+            const lon = Math.random() * Math.PI * 2;
+            impactPoint.position.set(
+                2 * Math.cos(lat) * Math.cos(lon),
+                2 * Math.sin(lat),
+                2 * Math.cos(lat) * Math.sin(lon)
+            );
+            
+            impactScene.add(impactPoint);
+            
+            // Add shockwave rings
+            const rings = [];
+            for (let i = 0; i < 3; i++) {
+                const ringGeometry = new THREE.RingGeometry(impactSize, impactSize + 0.02, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff6600,
+                    transparent: true,
+                    opacity: 0.5,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.position.copy(impactPoint.position);
+                ring.lookAt(0, 0, 0);
+                impactScene.add(ring);
+                rings.push(ring);
+                
+                // Animate ring
+                const startTime = Date.now();
+                const animateRing = () => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    if (elapsed < 2 + i * 0.3) {
+                        ring.scale.setScalar(1 + elapsed * (1 + i * 0.5));
+                        ring.material.opacity = 0.5 * (1 - elapsed / (2 + i * 0.3));
+                        requestAnimationFrame(animateRing);
+                    } else {
+                        impactScene.remove(ring);
+                    }
+                };
+                setTimeout(animateRing, i * 300);
+            }
+        }
+        
+        function updateSimulation() {
+            const diameter = document.getElementById('diameter').value;
+            const velocity = document.getElementById('velocity').value;
+            const angle = document.getElementById('angle').value;
+            const densitySelect = document.getElementById('density');
+            const density = densitySelect.value;
+            const densityText = densitySelect.options[densitySelect.selectedIndex].text;
+            
+            document.getElementById('diameter-value').textContent = 
+                diameter >= 1000 ? `${(diameter/1000).toFixed(1)} km` : `${diameter} m`;
+            document.getElementById('velocity-value').textContent = `${velocity} km/s`;
+            document.getElementById('angle-value').textContent = `${angle}°`;
+            document.getElementById('density-value').textContent = densityText;
+        }
+        
+        async function runSimulation() {
+            const diameter = parseFloat(document.getElementById('diameter').value);
+            const velocity = parseFloat(document.getElementById('velocity').value);
+            const angle = parseFloat(document.getElementById('angle').value);
+            const density = parseFloat(document.getElementById('density').value);
+            
+            // Show loading state
+            document.getElementById('results-section').classList.remove('hidden');
+            
+            try {
+                // Call API
+                const response = await fetch(`${API_BASE}/simulator/impact`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        diameter_m: diameter,
+                        velocity_km_s: velocity,
+                        angle_degrees: angle,
+                        density_kg_m3: density
+                    })
+                });
+                
+                if (!response.ok) {
+                    // Use local calculation if API fails
+                    calculateLocally(diameter, velocity, angle, density);
+                    return;
+                }
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                // Use local calculation as fallback
+                calculateLocally(diameter, velocity, angle, density);
+            }
+        }
+        
+        function calculateLocally(diameter, velocity, angle, density) {
+            // Local physics calculation (same as backend)
+            const radius = diameter / 2;
+            const volume = (4/3) * Math.PI * Math.pow(radius, 3);
+            const mass = volume * density;
+            const velocityMs = velocity * 1000;
+            const angleRad = angle * (Math.PI / 180);
+            
+            // Energy = 0.5 * m * v^2 (adjusted for angle)
+            const energy = 0.5 * mass * Math.pow(velocityMs, 2) * Math.sin(angleRad);
+            const megatons = energy / 4.184e15;
+            
+            // Crater diameter (Pi-scaling)
+            const craterDiameter = 1.16 * Math.pow(density / 2500, 0.22) * 
+                                   Math.pow(mass, 0.28) * 
+                                   Math.pow(velocityMs, 0.44) * 
+                                   Math.pow(9.81, -0.22) *
+                                   Math.pow(Math.sin(angleRad), 0.33);
+            
+            // Effects
+            const fireballRadius = 0.002 * Math.pow(energy, 0.32);
+            const thermalRadius = fireballRadius * 10;
+            const shockwaveRadius = fireballRadius * 20;
+            
+            displayResults({
+                energy_joules: energy,
+                energy_megatons: megatons,
+                crater_diameter_km: craterDiameter / 1000,
+                crater_depth_km: craterDiameter / 5000,
+                fireball_radius_km: fireballRadius / 1000,
+                thermal_radius_km: thermalRadius / 1000,
+                shockwave_radius_km: shockwaveRadius / 1000,
+                equivalent_earthquake: Math.log10(energy) / 1.5 - 4.8
+            });
+        }
+        
+        function displayResults(data) {
+            // Energy
+            const energyJoules = data.energy_joules || 0;
+            const energyMT = data.energy_megatons || 0;
+            
+            document.getElementById('energy-joules').textContent = formatScientific(energyJoules);
+            document.getElementById('energy-mt').textContent = 
+                energyMT >= 1000 ? `${(energyMT/1000).toFixed(1)} Gigatones` : 
+                energyMT >= 1 ? `${energyMT.toFixed(1)} MT` : 
+                `${(energyMT * 1000).toFixed(0)} KT`;
+            
+            // Nuclear comparison
+            const hiroshima = 0.015; // 15 KT
+            const tsarBomba = 50; // 50 MT
+            const hiroshimaCount = energyMT / hiroshima;
+            
+            let comparison = '';
+            if (hiroshimaCount < 1) {
+                comparison = `Menor que Hiroshima (${(hiroshimaCount * 100).toFixed(1)}%)`;
+            } else if (hiroshimaCount < 1000) {
+                comparison = `≈ ${hiroshimaCount.toFixed(0)} bombas de Hiroshima`;
+            } else if (hiroshimaCount < 1000000) {
+                comparison = `≈ ${(hiroshimaCount/1000).toFixed(1)} mil bombas de Hiroshima`;
+            } else {
+                comparison = `≈ ${(energyMT/tsarBomba).toFixed(0)} Tsar Bombas (la más potente jamás creada)`;
+            }
+            document.getElementById('nuclear-comparison').textContent = comparison;
+            
+            // Crater
+            const craterDiam = data.crater_diameter_km || 0;
+            const craterDepth = data.crater_depth_km || 0;
+            
+            document.getElementById('crater-diameter').textContent = 
+                craterDiam >= 1 ? `${craterDiam.toFixed(1)} km` : `${(craterDiam * 1000).toFixed(0)} m`;
+            document.getElementById('crater-depth').textContent = 
+                craterDepth >= 1 ? `${craterDepth.toFixed(2)} km` : `${(craterDepth * 1000).toFixed(0)} m`;
+            
+            // Update crater visual
+            updateCraterVisual(craterDiam);
+            
+            // Effects
+            const fireball = data.fireball_radius_km || 0;
+            const thermal = data.thermal_radius_km || 0;
+            const shockwave = data.shockwave_radius_km || 0;
+            const earthquake = data.equivalent_earthquake || 0;
+            
+            document.getElementById('fireball-radius').textContent = 
+                fireball >= 1 ? `${fireball.toFixed(1)} km` : `${(fireball * 1000).toFixed(0)} m`;
+            document.getElementById('thermal-radius').textContent = 
+                thermal >= 1 ? `${thermal.toFixed(1)} km` : `${(thermal * 1000).toFixed(0)} m`;
+            document.getElementById('shockwave-radius').textContent = 
+                shockwave >= 1 ? `${shockwave.toFixed(1)} km` : `${(shockwave * 1000).toFixed(0)} m`;
+            document.getElementById('earthquake-mag').textContent = `${earthquake.toFixed(1)} (Richter)`;
+            
+            // Update effect indicators (0-100%)
+            const maxRadius = 1000; // km scale
+            document.getElementById('fireball-indicator').style.left = 
+                `${Math.min(95, (Math.log10(fireball + 1) / Math.log10(maxRadius)) * 100)}%`;
+            document.getElementById('thermal-indicator').style.left = 
+                `${Math.min(95, (Math.log10(thermal + 1) / Math.log10(maxRadius)) * 100)}%`;
+            document.getElementById('shockwave-indicator').style.left = 
+                `${Math.min(95, (Math.log10(shockwave + 1) / Math.log10(maxRadius)) * 100)}%`;
+            
+            // Damage description
+            updateDamageDescription(energyMT, craterDiam, shockwave);
+            
+            // Create 3D impact effect
+            createImpactEffect(energyJoules);
+            
+            // Update comparison chart
+            updateComparisonChart(energyMT);
+        }
+        
+        function formatScientific(num) {
+            if (num === 0) return '0';
+            const exp = Math.floor(Math.log10(Math.abs(num)));
+            const mantissa = num / Math.pow(10, exp);
+            return `${mantissa.toFixed(2)} × 10^${exp}`;
+        }
+        
+        function updateCraterVisual(diameter) {
+            const visual = document.getElementById('crater-visual');
+            visual.innerHTML = '';
+            
+            // Add rings based on crater size
+            const rings = Math.min(5, Math.max(1, Math.floor(Math.log10(diameter * 1000))));
+            for (let i = 1; i <= rings; i++) {
+                const ring = document.createElement('div');
+                ring.className = 'crater-ring';
+                const size = (i / rings) * 100;
+                ring.style.width = `${size}%`;
+                ring.style.height = `${size}%`;
+                ring.style.left = `${(100 - size) / 2}%`;
+                ring.style.top = `${(100 - size) / 2}%`;
+                visual.appendChild(ring);
+            }
+            
+            // Center glow
+            const center = document.createElement('div');
+            center.style.cssText = `
+                position: absolute;
+                width: 30%;
+                height: 30%;
+                left: 35%;
+                top: 35%;
+                background: radial-gradient(circle, #ff6600 0%, transparent 70%);
+                border-radius: 50%;
+            `;
+            visual.appendChild(center);
+        }
+        
+        function updateDamageDescription(megatons, craterKm, shockwaveKm) {
+            let description = '';
+            
+            if (megatons < 0.001) {
+                description = `Este impacto produciría una explosión localizada. Podría destruir estructuras en un área pequeña pero no causaría daños regionales significativos. Comparable a una explosión industrial grande.`;
+            } else if (megatons < 0.1) {
+                description = `Explosión equivalente a una bomba nuclear táctica. Destrucción total en un radio de ${(shockwaveKm * 0.5).toFixed(1)} km. Edificios dañados hasta ${shockwaveKm.toFixed(1)} km. Potencial de miles de víctimas en área poblada.`;
+            } else if (megatons < 10) {
+                description = `Evento de nivel ciudad. Una ciudad entera sería destruida. La onda expansiva rompería ventanas a decenas de kilómetros. Posibles cientos de miles de víctimas en área urbana.`;
+            } else if (megatons < 1000) {
+                description = `Evento de nivel regional. Destrucción comparable a múltiples armas nucleares. Impacto climático local temporal. Potencial de millones de afectados.`;
+            } else if (megatons < 100000) {
+                description = `Evento de nivel continental. Efectos climáticos significativos durante meses. Tsunamis masivos si impacta en océano. Extinción regional de especies.`;
+            } else {
+                description = `⚠️ EVENTO DE EXTINCIÓN MASIVA. Invierno de impacto global. Colapso de ecosistemas. Potencial extinción del 75%+ de especies. Civilización en peligro crítico.`;
+            }
+            
+            document.getElementById('damage-description').textContent = description;
+        }
+        
+        function loadHistorical(name) {
+            const impact = HISTORICAL_IMPACTS[name];
+            if (!impact) return;
+            
+            document.getElementById('diameter').value = impact.diameter;
+            document.getElementById('velocity').value = impact.velocity;
+            document.getElementById('angle').value = impact.angle;
+            document.getElementById('density').value = impact.density;
+            
+            updateSimulation();
+            runSimulation();
+        }
+        
+        async function loadHistoricalGrid() {
+            const grid = document.getElementById('historical-grid');
+            
+            const impacts = [
+                {
+                    name: 'Chicxulub',
+                    emoji: '🦖',
+                    year: 'Hace 66 millones de años',
+                    location: 'Yucatán, México',
+                    diameter: '10-15 km',
+                    effects: 'Extinción de los dinosaurios',
+                    color: 'from-purple-500 to-pink-600'
+                },
+                {
+                    name: 'Tunguska',
+                    emoji: '💥',
+                    year: '1908',
+                    location: 'Siberia, Rusia',
+                    diameter: '~60 m',
+                    effects: 'Arrasó 2,000 km² de bosque',
+                    color: 'from-orange-500 to-red-600'
+                },
+                {
+                    name: 'Chelyabinsk',
+                    emoji: '☄️',
+                    year: '2013',
+                    location: 'Rusia',
+                    diameter: '~20 m',
+                    effects: '1,500 heridos por onda expansiva',
+                    color: 'from-yellow-500 to-orange-600'
+                },
+                {
+                    name: 'Barringer',
+                    emoji: '🕳️',
+                    year: 'Hace 50,000 años',
+                    location: 'Arizona, USA',
+                    diameter: '~50 m',
+                    effects: 'Cráter de 1.2 km visible hoy',
+                    color: 'from-amber-500 to-yellow-600'
+                },
+                {
+                    name: 'Vredefort',
+                    emoji: '🌍',
+                    year: 'Hace 2,000 millones de años',
+                    location: 'Sudáfrica',
+                    diameter: '~15 km',
+                    effects: 'Cráter más grande conocido (300 km)',
+                    color: 'from-green-500 to-teal-600'
+                },
+                {
+                    name: 'Sudbury',
+                    emoji: '🔴',
+                    year: 'Hace 1,850 millones de años',
+                    location: 'Ontario, Canadá',
+                    diameter: '~10-15 km',
+                    effects: 'Rico en minerales de níquel',
+                    color: 'from-blue-500 to-indigo-600'
+                },
+                {
+                    name: 'Popigai',
+                    emoji: '💎',
+                    year: 'Hace 35 millones de años',
+                    location: 'Siberia, Rusia',
+                    diameter: '~5 km',
+                    effects: 'Contiene diamantes de impacto',
+                    color: 'from-cyan-500 to-blue-600'
+                },
+                {
+                    name: 'Manicouagan',
+                    emoji: '🌙',
+                    year: 'Hace 215 millones de años',
+                    location: 'Quebec, Canadá',
+                    diameter: '~5 km',
+                    effects: 'Anillo visible desde el espacio',
+                    color: 'from-indigo-500 to-purple-600'
+                }
+            ];
+            
+            grid.innerHTML = impacts.map(impact => `
+                <div class="glass rounded-xl p-5 hover:bg-white/5 transition cursor-pointer" 
+                     onclick="loadHistorical('${impact.name.toLowerCase()}')">
+                    <div class="text-4xl mb-3">${impact.emoji}</div>
+                    <h3 class="font-bold text-lg bg-gradient-to-r ${impact.color} bg-clip-text text-transparent">
+                        ${impact.name}
+                    </h3>
+                    <p class="text-gray-400 text-sm">${impact.year}</p>
+                    <p class="text-gray-300 text-xs mt-2">📍 ${impact.location}</p>
+                    <p class="text-gray-300 text-xs">📏 ${impact.diameter}</p>
+                    <p class="text-gray-400 text-xs mt-2 italic">"${impact.effects}"</p>
+                </div>
+            `).join('');
+        }
+        
+        function initComparisonChart() {
+            const ctx = document.getElementById('comparison-chart').getContext('2d');
+            
+            comparisonChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Tu simulación', 'Chelyabinsk', 'Tunguska', 'Hiroshima', 'Tsar Bomba', 'Chicxulub'],
+                    datasets: [{
+                        label: 'Energía (Megatones TNT)',
+                        data: [0, 0.5, 15, 0.015, 50, 100000000],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(234, 179, 8, 0.8)',
+                            'rgba(249, 115, 22, 0.8)',
+                            'rgba(34, 197, 94, 0.8)',
+                            'rgba(168, 85, 247, 0.8)',
+                            'rgba(236, 72, 153, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(234, 179, 8, 1)',
+                            'rgba(249, 115, 22, 1)',
+                            'rgba(34, 197, 94, 1)',
+                            'rgba(168, 85, 247, 1)',
+                            'rgba(236, 72, 153, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'logarithmic',
+                            min: 0.001,
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: function(value) {
+                                    if (value >= 1000000) return `${value/1000000}M MT`;
+                                    if (value >= 1000) return `${value/1000}K MT`;
+                                    if (value >= 1) return `${value} MT`;
+                                    return `${value * 1000} KT`;
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#9ca3af'
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateComparisonChart(userMegatons) {
+            if (comparisonChart) {
+                comparisonChart.data.datasets[0].data[0] = Math.max(0.001, userMegatons);
+                comparisonChart.update();
+            }
+        }
+        
+        // Initialize everything
+        document.addEventListener('DOMContentLoaded', () => {
+            init3D();
+            loadHistoricalGrid();
+            initComparisonChart();
+            updateSimulation();
+        });
+    </script>
+</body>
+</html>

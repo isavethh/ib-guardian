@@ -20,7 +20,7 @@ from app.middleware.security import (
     TimingMiddleware
 )
 from app.middleware.rate_limit import limiter, rate_limit_exceeded_handler
-from app.api.routes import auth, neo, api_keys
+from app.api.routes import auth, neo, api_keys, simulator
 from app.services.nasa_client import nasa_client
 
 
@@ -140,6 +140,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(neo.router, prefix="/api/v1")
 app.include_router(api_keys.router, prefix="/api/v1")
+app.include_router(simulator.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])

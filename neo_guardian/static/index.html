@@ -89,6 +89,19 @@
                     </div>
                     
                     <div class="flex items-center gap-4">
+                        <!-- Feature Navigation -->
+                        <nav class="hidden md:flex items-center gap-2">
+                            <a href="/static/solar-system.html" class="px-4 py-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/40 transition-colors text-sm flex items-center gap-2">
+                                <span>🌍</span> Sistema Solar 3D
+                            </a>
+                            <a href="/static/simulator.html" class="px-4 py-2 rounded-lg bg-orange-600/20 hover:bg-orange-600/40 transition-colors text-sm flex items-center gap-2">
+                                <span>💥</span> Simulador
+                            </a>
+                            <a href="/static/education.html" class="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/40 transition-colors text-sm flex items-center gap-2">
+                                <span>📚</span> Aprender
+                            </a>
+                        </nav>
+                        
                         <div id="connection-status" class="flex items-center gap-2 px-3 py-1 rounded-full glass-card">
                             <span class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></span>
                             <span class="text-sm text-gray-300">NASA API</span>
@@ -159,6 +172,54 @@
                         BAJO
                     </div>
                 </div>
+            </div>
+            
+            <!-- Feature Cards - NEW SECTION -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- 3D Solar System -->
+                <a href="/static/solar-system.html" class="glass-card rounded-xl p-6 neo-card transition-all duration-300 group cursor-pointer block">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">🌍</div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+                        Sistema Solar 3D
+                    </h3>
+                    <p class="text-gray-400 text-sm">
+                        Explora el sistema solar en 3D interactivo. Visualiza órbitas de asteroides y su posición en tiempo real.
+                    </p>
+                    <div class="mt-4 flex items-center text-indigo-400 text-sm group-hover:gap-3 gap-1 transition-all">
+                        <span>Explorar</span>
+                        <span>→</span>
+                    </div>
+                </a>
+                
+                <!-- Impact Simulator -->
+                <a href="/static/simulator.html" class="glass-card rounded-xl p-6 neo-card transition-all duration-300 group cursor-pointer block">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">💥</div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent mb-2">
+                        Simulador de Impactos
+                    </h3>
+                    <p class="text-gray-400 text-sm">
+                        Calcula los efectos de un impacto de asteroide. Compara con eventos históricos como Chicxulub o Tunguska.
+                    </p>
+                    <div class="mt-4 flex items-center text-orange-400 text-sm group-hover:gap-3 gap-1 transition-all">
+                        <span>Simular</span>
+                        <span>→</span>
+                    </div>
+                </a>
+                
+                <!-- Education Modules -->
+                <a href="/static/education.html" class="glass-card rounded-xl p-6 neo-card transition-all duration-300 group cursor-pointer block">
+                    <div class="text-5xl mb-4 group-hover:scale-110 transition-transform">📚</div>
+                    <h3 class="text-xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+                        Academia de Defensa
+                    </h3>
+                    <p class="text-gray-400 text-sm">
+                        Aprende sobre asteroides, NEOs y defensa planetaria con módulos interactivos, quizzes y logros.
+                    </p>
+                    <div class="mt-4 flex items-center text-green-400 text-sm group-hover:gap-3 gap-1 transition-all">
+                        <span>Aprender</span>
+                        <span>→</span>
+                    </div>
+                </a>
             </div>
             
             <!-- Charts Row -->

@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📚 NEO Guardian - Academia de Defensa Planetaria</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Confetti for achievements -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        .module-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        .module-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .quiz-option {
+            transition: all 0.2s;
+        }
+        
+        .quiz-option:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: rgba(99, 102, 241, 0.5);
+        }
+        
+        .quiz-option.selected {
+            background: rgba(99, 102, 241, 0.3);
+            border-color: rgb(99, 102, 241);
+        }
+        
+        .quiz-option.correct {
+            background: rgba(34, 197, 94, 0.3);
+            border-color: rgb(34, 197, 94);
+        }
+        
+        .quiz-option.incorrect {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgb(239, 68, 68);
+        }
+        
+        .achievement-badge {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+        
+        .animate-pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        
+        .section-content.expanded {
+            max-height: 2000px;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <!-- Navigation -->
+    <nav class="glass rounded-2xl p-4 mb-6 flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="/static/index.html" class="text-3xl hover:scale-110 transition">🚀</a>
+            <div>
+                <h1 class="font-orbitron text-xl md:text-2xl font-bold bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
+                    Academia de Defensa Planetaria
+                </h1>
+                <p class="text-gray-400 text-sm">Aprende sobre asteroides, NEOs y cómo proteger la Tierra</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <a href="/static/solar-system.html" class="px-4 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 transition text-sm">
+                🌍 Vista 3D
+            </a>
+            <a href="/static/simulator.html" class="px-4 py-2 rounded-lg bg-orange-600/30 hover:bg-orange-600/50 transition text-sm">
+                💥 Simulador
+            </a>
+        </div>
+    </nav>
+    
+    <!-- User Progress Bar -->
+    <div class="glass rounded-2xl p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="text-3xl">🎓</div>
+                <div>
+                    <h3 class="font-semibold" id="user-level">Explorador Novato</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="w-48 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div id="xp-bar" class="h-full bg-gradient-to-r from-green-500 to-emerald-400 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <span id="xp-text" class="text-xs text-gray-400">0 / 100 XP</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-400" id="modules-completed">0</div>
+                    <div class="text-xs text-gray-400">Módulos</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-yellow-400" id="quizzes-passed">0</div>
+                    <div class="text-xs text-gray-400">Quizzes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-purple-400" id="achievements-earned">0</div>
+                    <div class="text-xs text-gray-400">Logros</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Modules List -->
+        <div class="lg:col-span-2 space-y-4" id="modules-container">
+            <!-- Modules will be loaded here -->
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="space-y-4">
+            <!-- Achievements -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="font-orbitron font-bold mb-4 flex items-center gap-2">
+                    <span>🏆</span> Logros
+                </h3>
+                <div class="grid grid-cols-4 gap-3" id="achievements-grid">
+                    <!-- Achievements will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Quick Facts -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="font-orbitron font-bold mb-4 flex items-center gap-2">
+                    <span>💡</span> Sabías que...
+                </h3>
+                <div id="random-fact" class="text-gray-300 text-sm leading-relaxed">
+                    Cargando dato interesante...
+                </div>
+                <button onclick="loadRandomFact()" class="mt-3 text-indigo-400 text-sm hover:text-indigo-300 transition">
+                    ↻ Otro dato
+                </button>
+            </div>
+            
+            <!-- Leaderboard -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="font-orbitron font-bold mb-4 flex items-center gap-2">
+                    <span>📊</span> Tu Progreso
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 text-sm">Asteroides</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="progress-module-1 h-full bg-blue-500 transition-all" style="width: 0%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 module-progress-1">0%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 text-sm">NEOs</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="progress-module-2 h-full bg-orange-500 transition-all" style="width: 0%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 module-progress-2">0%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 text-sm">Defensa Planetaria</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="progress-module-3 h-full bg-purple-500 transition-all" style="width: 0%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 module-progress-3">0%</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 text-sm">Ciencia de Impactos</span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div class="progress-module-4 h-full bg-red-500 transition-all" style="width: 0%"></div>
+                            </div>
+                            <span class="text-xs text-gray-400 module-progress-4">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Module Modal -->
+    <div id="module-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 glass p-6 border-b border-white/10 flex items-center justify-between">
+                <h2 id="modal-title" class="font-orbitron text-xl font-bold"></h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <div id="modal-content" class="p-6">
+                <!-- Content loaded dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quiz Modal -->
+    <div id="quiz-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass rounded-2xl max-w-2xl w-full">
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-orbitron text-xl font-bold">📝 Quiz</h2>
+                    <div class="text-sm text-gray-400">
+                        Pregunta <span id="quiz-current">1</span> de <span id="quiz-total">5</span>
+                    </div>
+                </div>
+                <div class="mt-3 h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div id="quiz-progress" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all" style="width: 20%"></div>
+                </div>
+            </div>
+            
+            <div id="quiz-content" class="p-6">
+                <!-- Quiz loaded dynamically -->
+            </div>
+            
+            <div class="p-6 border-t border-white/10 flex justify-between">
+                <button id="quiz-back" onclick="prevQuestion()" class="px-6 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition hidden">
+                    ← Anterior
+                </button>
+                <button id="quiz-next" onclick="nextQuestion()" class="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition ml-auto">
+                    Siguiente →
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Achievement Popup -->
+    <div id="achievement-popup" class="fixed top-4 right-4 z-50 hidden">
+        <div class="glass rounded-2xl p-6 animate-pulse-glow max-w-sm">
+            <div class="flex items-center gap-4">
+                <div class="text-5xl achievement-badge" id="achievement-icon">🏆</div>
+                <div>
+                    <div class="text-xs text-indigo-400 uppercase tracking-wider">¡Logro Desbloqueado!</div>
+                    <div id="achievement-title" class="font-bold text-lg">--</div>
+                    <div id="achievement-desc" class="text-sm text-gray-400">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // NEO Guardian - Educational Modules System
+        // =====================================================
+        
+        const API_BASE = 'http://localhost:8000/api/v1';
+        
+        // User Progress State
+        let userProgress = {
+            xp: 0,
+            level: 1,
+            modulesCompleted: [],
+            sectionsRead: {},
+            quizzesPassed: [],
+            achievements: []
+        };
+        
+        // Current quiz state
+        let currentQuiz = {
+            moduleId: null,
+            questions: [],
+            currentQuestion: 0,
+            answers: []
+        };
+        
+        // Modules Data (fallback if API fails)
+        const MODULES_DATA = [
+            {
+                id: "asteroids_basics",
+                title: "¿Qué son los Asteroides?",
+                description: "Descubre qué son los asteroides, de dónde vienen y por qué son importantes para entender nuestro Sistema Solar.",
+                icon: "🪨",
+                difficulty: "Principiante",
+                duration: "15 min",
+                xp_reward: 100,
+                color: "from-blue-500 to-cyan-500",
+                sections: [
+                    {
+                        title: "Introducción a los Asteroides",
+                        content: `Los asteroides son restos rocosos del Sistema Solar primitivo, formados hace aproximadamente 4,600 millones de años. 
+                        
+A diferencia de los planetas, los asteroides nunca lograron acumularse en un cuerpo grande debido a la influencia gravitacional de Júpiter.
+
+<strong>Datos clave:</strong>
+• Hay millones de asteroides en nuestro Sistema Solar
+• La mayoría se encuentran en el Cinturón de Asteroides entre Marte y Júpiter
+• Varían en tamaño desde unos pocos metros hasta 1,000 km de diámetro
+• Ceres, el más grande, tiene 950 km de diámetro`
+                    },
+                    {
+                        title: "Composición y Tipos",
+                        content: `Los asteroides se clasifican según su composición:
+
+<strong>Tipo C (Carbonáceos):</strong>
+Son los más comunes (75%). Muy oscuros, contienen carbono y minerales hidratados.
+
+<strong>Tipo S (Silíceos):</strong>
+Componen el 17%. Contienen silicatos de níquel y hierro.
+
+<strong>Tipo M (Metálicos):</strong>
+Los más raros pero valiosos. Compuestos principalmente de níquel y hierro.
+
+<strong>Dato curioso:</strong> El asteroide Psyche contiene metales valorados en más de $10,000 cuatrillones de dólares.`
+                    },
+                    {
+                        title: "Origen e Historia",
+                        content: `Los asteroides son "cápsulas del tiempo" cósmicas:
+
+<strong>Teoría de formación:</strong>
+Durante la formación del Sistema Solar, la intensa gravedad de Júpiter impidió que los materiales en el cinturón de asteroides se unieran para formar un planeta.
+
+<strong>Importancia científica:</strong>
+• Contienen materiales primitivos sin alterar
+• Pueden revelar la composición de la nebulosa solar original
+• Algunos contienen aminoácidos y compuestos orgánicos
+• Podrían haber traído agua y moléculas de vida a la Tierra`
+                    }
+                ],
+                quiz: [
+                    {
+                        question: "¿Dónde se encuentra la mayoría de los asteroides?",
+                        options: ["Entre la Tierra y Marte", "Entre Marte y Júpiter", "Más allá de Neptuno", "Cerca del Sol"],
+                        correct: 1
+                    },
+                    {
+                        question: "¿Qué tipo de asteroide es el más común?",
+                        options: ["Tipo S (Silíceos)", "Tipo M (Metálicos)", "Tipo C (Carbonáceos)", "Tipo X (Mixtos)"],
+                        correct: 2
+                    },
+                    {
+                        question: "¿Cuál es el asteroide más grande conocido?",
+                        options: ["Vesta", "Ceres", "Psyche", "Bennu"],
+                        correct: 1
+                    }
+                ]
+            },
+            {
+                id: "neo_objects",
+                title: "Objetos Cercanos a la Tierra (NEOs)",
+                description: "Aprende qué son los NEOs, cómo los detectamos y por qué es crucial monitorearlos constantemente.",
+                icon: "🌍",
+                difficulty: "Intermedio",
+                duration: "20 min",
+                xp_reward: 150,
+                color: "from-orange-500 to-red-500",
+                sections: [
+                    {
+                        title: "¿Qué es un NEO?",
+                        content: `Un Objeto Cercano a la Tierra (NEO, por sus siglas en inglés) es cualquier asteroide o cometa cuya órbita lo acerca a menos de 1.3 Unidades Astronómicas (UA) del Sol.
+
+<strong>1 UA = 150 millones de km</strong> (la distancia Tierra-Sol)
+
+<strong>Clasificación de NEOs:</strong>
+• <strong>Atens:</strong> Órbitas mayormente dentro de la órbita terrestre
+• <strong>Apollos:</strong> Órbitas que cruzan la de la Tierra (externa)
+• <strong>Amors:</strong> Órbitas entre la Tierra y Marte
+
+<strong>Estadísticas actuales:</strong>
+• Más de 32,000 NEOs conocidos
+• ~2,300 son PHAs (Potencialmente Peligrosos)
+• Se descubren ~3,000 nuevos cada año`
+                    },
+                    {
+                        title: "Objetos Potencialmente Peligrosos (PHAs)",
+                        content: `Un PHA (Potentially Hazardous Asteroid) cumple dos criterios:
+
+<strong>1. Tamaño:</strong>
+Diámetro estimado de 140 metros o más
+
+<strong>2. Distancia mínima de órbita:</strong>
+Puede acercarse a menos de 0.05 UA (7.5 millones de km) de la Tierra
+
+<strong>¿Por qué 140 metros?</strong>
+Un asteroide de este tamaño podría destruir una ciudad entera y causar daños regionales significativos.
+
+<strong>La buena noticia:</strong>
+No hay ningún asteroide conocido con probabilidad significativa de impactar la Tierra en los próximos 100 años.`
+                    },
+                    {
+                        title: "Sistemas de Detección",
+                        content: `La NASA y otras agencias usan varios sistemas para detectar NEOs:
+
+<strong>Telescopios terrestres:</strong>
+• Catalina Sky Survey (Arizona)
+• Pan-STARRS (Hawaii)
+• ATLAS (Hawaii y Chile)
+
+<strong>Misiones espaciales:</strong>
+• NEOWISE: Telescopio infrarrojo espacial
+• Próximamente: NEO Surveyor (2028)
+
+<strong>El proceso de detección:</strong>
+1. Detectar punto de luz en movimiento
+2. Confirmar con múltiples observaciones
+3. Calcular órbita preliminar
+4. Determinar si es nuevo o conocido
+5. Clasificar nivel de riesgo`
+                    }
+                ],
+                quiz: [
+                    {
+                        question: "¿A qué distancia máxima del Sol puede estar un NEO?",
+                        options: ["0.5 UA", "1.0 UA", "1.3 UA", "2.0 UA"],
+                        correct: 2
+                    },
+                    {
+                        question: "¿Cuál es el tamaño mínimo para ser clasificado como PHA?",
+                        options: ["50 metros", "100 metros", "140 metros", "500 metros"],
+                        correct: 2
+                    },
+                    {
+                        question: "¿Cuántos NEOs aproximadamente se han descubierto?",
+                        options: ["~5,000", "~15,000", "~32,000", "~100,000"],
+                        correct: 2
+                    }
+                ]
+            },
+            {
+                id: "planetary_defense",
+                title: "Defensa Planetaria",
+                description: "Explora las estrategias que la humanidad está desarrollando para proteger la Tierra de impactos de asteroides.",
+                icon: "🛡️",
+                difficulty: "Avanzado",
+                duration: "25 min",
+                xp_reward: 200,
+                color: "from-purple-500 to-pink-500",
+                sections: [
+                    {
+                        title: "Estrategias de Deflexión",
+                        content: `Existen varias estrategias propuestas para desviar asteroides:
+
+<strong>1. Impactor Cinético:</strong>
+Colisionar una nave espacial a alta velocidad para cambiar la órbita del asteroide.
+✅ Ya probado con éxito por DART en 2022
+
+<strong>2. Tractor Gravitacional:</strong>
+Una nave espacial masiva vuela junto al asteroide, atrayéndolo lentamente con su gravedad.
+🕐 Requiere años de operación
+
+<strong>3. Ablación Láser/Solar:</strong>
+Calentar la superficie para crear chorros de gas que actúen como propulsores.
+🔬 En fase de investigación
+
+<strong>4. Explosivo Nuclear:</strong>
+Último recurso para asteroides grandes con poco tiempo de aviso.
+⚠️ No destruye, sino que desvía`
+                    },
+                    {
+                        title: "Misión DART: Un Hito Histórico",
+                        content: `El 26 de septiembre de 2022, la NASA hizo historia:
+
+<strong>Double Asteroid Redirection Test (DART)</strong>
+
+La nave impactó el asteroide Dimorphos (160m) a 22,500 km/h.
+
+<strong>Resultados:</strong>
+• Período orbital reducido de 11h 55m a 11h 23m
+• ¡32 minutos de cambio! (esperaban 10 min)
+• Demostró que la técnica funciona
+
+<strong>Próximo paso:</strong>
+La misión Hera de la ESA (2024) visitará Dimorphos para estudiar el cráter de impacto y medir la masa exacta del asteroide.`
+                    },
+                    {
+                        title: "Tiempo de Reacción",
+                        content: `El tiempo de aviso es crítico:
+
+<strong>Con décadas de aviso:</strong>
+• Tractor gravitacional viable
+• Múltiples oportunidades de misión
+• Bajo riesgo de fragmentación
+
+<strong>Con años de aviso:</strong>
+• Impactor cinético ideal
+• Tiempo para verificar desviación
+• Posible misión de seguimiento
+
+<strong>Con meses de aviso:</strong>
+• Opciones muy limitadas
+• Posible uso de dispositivo nuclear
+• Evacuación como contingencia
+
+<strong>Semanas o menos:</strong>
+• Solo evacuación posible
+• Preparación para impacto
+
+<strong>Por eso el monitoreo continuo es CRUCIAL.</strong>`
+                    }
+                ],
+                quiz: [
+                    {
+                        question: "¿Qué misión demostró por primera vez la deflexión de asteroides?",
+                        options: ["OSIRIS-REx", "DART", "Hayabusa", "NEOWISE"],
+                        correct: 1
+                    },
+                    {
+                        question: "¿Cuánto cambió el período orbital de Dimorphos tras el impacto?",
+                        options: ["5 minutos", "32 minutos", "2 horas", "1 día"],
+                        correct: 1
+                    },
+                    {
+                        question: "¿Qué estrategia requiere décadas para funcionar?",
+                        options: ["Impactor cinético", "Explosivo nuclear", "Tractor gravitacional", "Ablación láser"],
+                        correct: 2
+                    }
+                ]
+            },
+            {
+                id: "impact_science",
+                title: "La Ciencia de los Impactos",
+                description: "Entiende la física detrás de los impactos de asteroides y sus efectos catastróficos en la Tierra.",
+                icon: "💥",
+                difficulty: "Experto",
+                duration: "30 min",
+                xp_reward: 250,
+                color: "from-red-500 to-orange-500",
+                sections: [
+                    {
+                        title: "Física del Impacto",
+                        content: `La energía de un impacto se calcula con:
+
+<strong>E = ½ × m × v²</strong>
+
+Donde:
+• m = masa del asteroide (kg)
+• v = velocidad de impacto (m/s)
+
+<strong>Ejemplo - Asteroide de 100m:</strong>
+• Masa: ~2 millones de toneladas
+• Velocidad típica: 20 km/s
+• Energía: ~400 megatones TNT
+• Eso es 26,000 veces Hiroshima
+
+<strong>¿Por qué tanta energía?</strong>
+La velocidad se eleva al cuadrado. Doblar la velocidad = 4x la energía.`
+                    },
+                    {
+                        title: "Formación de Cráteres",
+                        content: `El proceso de formación de un cráter ocurre en milisegundos:
+
+<strong>Fase 1: Contacto (0.001 segundos)</strong>
+El asteroide penetra la superficie. Se genera una onda de choque.
+
+<strong>Fase 2: Excavación (segundos)</strong>
+Material expulsado hacia arriba y afuera. Se forma cavidad transitoria.
+
+<strong>Fase 3: Modificación (minutos)</strong>
+Colapso de paredes. Formación de pico central en cráteres grandes.
+
+<strong>Fórmula del diámetro del cráter:</strong>
+D ≈ 1.16 × (ρ/ρt)^0.22 × m^0.28 × v^0.44 × g^-0.22
+
+Los cráteres son ~10-20 veces más grandes que el asteroide.`
+                    },
+                    {
+                        title: "Efectos Secundarios",
+                        content: `Un impacto grande causa múltiples efectos devastadores:
+
+<strong>Bola de fuego:</strong>
+Temperaturas de miles de grados. Incendios en cientos de kilómetros.
+
+<strong>Onda expansiva:</strong>
+Destruye estructuras a decenas o cientos de km.
+
+<strong>Eyecta:</strong>
+Material lanzado que llueve sobre grandes áreas.
+
+<strong>Terremotos:</strong>
+Impactos grandes generan sismos globales.
+
+<strong>Tsunami:</strong>
+Impactos oceánicos generan olas de cientos de metros.
+
+<strong>Invierno de impacto:</strong>
+El polvo bloquea el sol. Caída de temperaturas global. Colapso de fotosíntesis.`
+                    },
+                    {
+                        title: "Escala de Turín",
+                        content: `La Escala de Turín clasifica el riesgo de impacto de 0 a 10:
+
+<strong>0 - Sin riesgo:</strong> Probabilidad de colisión cero o casi cero.
+
+<strong>1 - Normal:</strong> Merece monitoreo. Pasará cerca.
+
+<strong>2-4 - Merece atención:</strong> Probabilidad de impacto notable.
+
+<strong>5-7 - Amenazante:</strong> Alta probabilidad. Daños regionales/globales.
+
+<strong>8-10 - Cierto:</strong> Colisión segura. Destrucción regional a global.
+
+<strong>Estado actual:</strong>
+Ningún objeto conocido está por encima de nivel 0.
+
+<strong>Dato histórico:</strong>
+Apophis llegó brevemente a nivel 4 en 2004 antes de que se refinara su órbita.`
+                    }
+                ],
+                quiz: [
+                    {
+                        question: "¿Qué variable tiene más impacto en la energía de colisión?",
+                        options: ["Masa", "Velocidad", "Ángulo", "Densidad"],
+                        correct: 1
+                    },
+                    {
+                        question: "¿Qué escala mide el riesgo de impacto de asteroides?",
+                        options: ["Richter", "Mercalli", "Turín", "Fujita"],
+                        correct: 2
+                    },
+                    {
+                        question: "¿Cuánto más grande es típicamente el cráter que el asteroide?",
+                        options: ["2-3 veces", "5-8 veces", "10-20 veces", "50-100 veces"],
+                        correct: 2
+                    }
+                ]
+            }
+        ];
+        
+        // Achievements
+        const ACHIEVEMENTS = [
+            { id: "first_module", title: "Primer Paso", desc: "Completar tu primer módulo", icon: "🌟", unlocked: false },
+            { id: "all_modules", title: "Explorador Completo", desc: "Completar todos los módulos", icon: "🏆", unlocked: false },
+            { id: "first_quiz", title: "Cerebrito", desc: "Aprobar tu primer quiz", icon: "🧠", unlocked: false },
+            { id: "perfect_quiz", title: "Perfeccionista", desc: "100% en un quiz", icon: "💯", unlocked: false },
+            { id: "all_quizzes", title: "Maestro del Conocimiento", desc: "Aprobar todos los quizzes", icon: "📚", unlocked: false },
+            { id: "speed_reader", title: "Lector Veloz", desc: "Leer 3 secciones en 5 min", icon: "⚡", unlocked: false },
+            { id: "curious", title: "Mente Curiosa", desc: "Leer 10 datos curiosos", icon: "🔍", unlocked: false },
+            { id: "defender", title: "Defensor Planetario", desc: "Alcanzar 500 XP", icon: "🛡️", unlocked: false }
+        ];
+        
+        // Fun Facts
+        const FUN_FACTS = [
+            "El asteroide Apophis pasará más cerca de la Tierra que nuestros satélites geoestacionarios en 2029.",
+            "Un asteroide del tamaño de un autobús impacta la atmósfera terrestre aproximadamente una vez al año.",
+            "El Cinturón de Asteroides contiene millones de objetos, pero la masa total es menos del 4% de la Luna.",
+            "Los asteroides metálicos contienen más platino y oro que toda la producción minera de la historia humana.",
+            "La misión OSIRIS-REx trajo 250 gramos de material del asteroide Bennu a la Tierra en 2023.",
+            "El evento de Tunguska de 1908 liberó energía equivalente a 1,000 bombas de Hiroshima.",
+            "Algunos asteroides tienen sus propias mini-lunas orbitándolos.",
+            "El asteroide Ceres tiene suficiente agua bajo su superficie para llenar todos los océanos de la Tierra.",
+            "La NASA ha catalogado más del 95% de los asteroides que podrían causar extinción masiva.",
+            "Los asteroides son tan oscuros que reflejan menos luz que el carbón."
+        ];
+        
+        // =====================================================
+        // Functions
+        // =====================================================
+        
+        function loadUserProgress() {
+            const saved = localStorage.getItem('neo_guardian_education_progress');
+            if (saved) {
+                userProgress = JSON.parse(saved);
+            }
+            updateUI();
+        }
+        
+        function saveUserProgress() {
+            localStorage.setItem('neo_guardian_education_progress', JSON.stringify(userProgress));
+            updateUI();
+        }
+        
+        function addXP(amount) {
+            userProgress.xp += amount;
+            
+            // Check for level up
+            const xpPerLevel = 100 * userProgress.level;
+            if (userProgress.xp >= xpPerLevel) {
+                userProgress.xp -= xpPerLevel;
+                userProgress.level++;
+            }
+            
+            // Check defender achievement
+            if (userProgress.xp >= 500) {
+                unlockAchievement('defender');
+            }
+            
+            saveUserProgress();
+        }
+        
+        function updateUI() {
+            // XP bar
+            const xpPerLevel = 100 * userProgress.level;
+            const progress = (userProgress.xp / xpPerLevel) * 100;
+            document.getElementById('xp-bar').style.width = `${progress}%`;
+            document.getElementById('xp-text').textContent = `${userProgress.xp} / ${xpPerLevel} XP`;
+            
+            // Level
+            const levels = ['Explorador Novato', 'Observador Espacial', 'Analista de NEOs', 
+                           'Especialista en Defensa', 'Guardián Planetario', 'Maestro del Cosmos'];
+            document.getElementById('user-level').textContent = levels[Math.min(userProgress.level - 1, levels.length - 1)];
+            
+            // Stats
+            document.getElementById('modules-completed').textContent = userProgress.modulesCompleted.length;
+            document.getElementById('quizzes-passed').textContent = userProgress.quizzesPassed.length;
+            document.getElementById('achievements-earned').textContent = userProgress.achievements.length;
+            
+            // Module progress
+            MODULES_DATA.forEach((module, i) => {
+                const sectionsRead = (userProgress.sectionsRead[module.id] || []).length;
+                const totalSections = module.sections.length;
+                const progress = (sectionsRead / totalSections) * 100;
+                
+                const bar = document.querySelector(`.progress-module-${i + 1}`);
+                const text = document.querySelector(`.module-progress-${i + 1}`);
+                if (bar) bar.style.width = `${progress}%`;
+                if (text) text.textContent = `${Math.round(progress)}%`;
+            });
+        }
+        
+        function renderModules() {
+            const container = document.getElementById('modules-container');
+            
+            container.innerHTML = MODULES_DATA.map((module, index) => {
+                const isCompleted = userProgress.modulesCompleted.includes(module.id);
+                const sectionsRead = (userProgress.sectionsRead[module.id] || []).length;
+                const progress = (sectionsRead / module.sections.length) * 100;
+                
+                return `
+                    <div class="module-card glass rounded-2xl overflow-hidden" onclick="openModule('${module.id}')">
+                        <div class="h-2 bg-gradient-to-r ${module.color}"></div>
+                        <div class="p-6">
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-5xl">${module.icon}</div>
+                                    <div>
+                                        <h3 class="font-bold text-lg">${module.title}</h3>
+                                        <p class="text-gray-400 text-sm mt-1">${module.description}</p>
+                                    </div>
+                                </div>
+                                ${isCompleted ? '<div class="text-3xl">✅</div>' : ''}
+                            </div>
+                            
+                            <div class="flex items-center gap-6 mt-4 text-sm">
+                                <div class="flex items-center gap-1 text-gray-400">
+                                    <span>📊</span> ${module.difficulty}
+                                </div>
+                                <div class="flex items-center gap-1 text-gray-400">
+                                    <span>⏱️</span> ${module.duration}
+                                </div>
+                                <div class="flex items-center gap-1 text-yellow-400">
+                                    <span>⭐</span> +${module.xp_reward} XP
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="flex justify-between text-xs text-gray-400 mb-1">
+                                    <span>Progreso</span>
+                                    <span>${Math.round(progress)}%</span>
+                                </div>
+                                <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r ${module.color} transition-all" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function openModule(moduleId) {
+            const module = MODULES_DATA.find(m => m.id === moduleId);
+            if (!module) return;
+            
+            const modal = document.getElementById('module-modal');
+            document.getElementById('modal-title').innerHTML = `${module.icon} ${module.title}`;
+            
+            const content = document.getElementById('modal-content');
+            const sectionsRead = userProgress.sectionsRead[moduleId] || [];
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    ${module.sections.map((section, index) => {
+                        const isRead = sectionsRead.includes(index);
+                        return `
+                            <div class="glass rounded-xl overflow-hidden">
+                                <button onclick="toggleSection('${moduleId}', ${index})" 
+                                        class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5 transition">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-full ${isRead ? 'bg-green-500' : 'bg-gray-600'} flex items-center justify-center text-sm">
+                                            ${isRead ? '✓' : index + 1}
+                                        </div>
+                                        <span class="font-semibold">${section.title}</span>
+                                    </div>
+                                    <span class="text-gray-400 section-arrow-${moduleId}-${index}">▼</span>
+                                </button>
+                                <div id="section-${moduleId}-${index}" class="section-content px-4 pb-4">
+                                    <div class="pl-11 text-gray-300 leading-relaxed whitespace-pre-line">
+                                        ${section.content}
+                                    </div>
+                                    <button onclick="markSectionRead('${moduleId}', ${index})" 
+                                            class="ml-11 mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition text-sm ${isRead ? 'hidden' : ''}">
+                                        Marcar como leído ✓
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div class="mt-6 p-4 glass rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-semibold">📝 Quiz del Módulo</h4>
+                            <p class="text-sm text-gray-400">${module.quiz.length} preguntas • Requiere leer todas las secciones</p>
+                        </div>
+                        <button onclick="startQuiz('${moduleId}')" 
+                                class="px-6 py-2 rounded-lg bg-gradient-to-r ${module.color} hover:opacity-90 transition font-semibold"
+                                ${sectionsRead.length < module.sections.length ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            Iniciar Quiz
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+        
+        function closeModal() {
+            document.getElementById('module-modal').classList.add('hidden');
+        }
+        
+        function toggleSection(moduleId, sectionIndex) {
+            const section = document.getElementById(`section-${moduleId}-${sectionIndex}`);
+            const arrow = document.querySelector(`.section-arrow-${moduleId}-${sectionIndex}`);
+            
+            if (section.classList.contains('expanded')) {
+                section.classList.remove('expanded');
+                arrow.textContent = '▼';
+            } else {
+                section.classList.add('expanded');
+                arrow.textContent = '▲';
+            }
+        }
+        
+        function markSectionRead(moduleId, sectionIndex) {
+            if (!userProgress.sectionsRead[moduleId]) {
+                userProgress.sectionsRead[moduleId] = [];
+            }
+            
+            if (!userProgress.sectionsRead[moduleId].includes(sectionIndex)) {
+                userProgress.sectionsRead[moduleId].push(sectionIndex);
+                addXP(20);
+                
+                // Check if module completed
+                const module = MODULES_DATA.find(m => m.id === moduleId);
+                if (userProgress.sectionsRead[moduleId].length === module.sections.length) {
+                    if (!userProgress.modulesCompleted.includes(moduleId)) {
+                        userProgress.modulesCompleted.push(moduleId);
+                        addXP(module.xp_reward);
+                        
+                        // Achievement: first module
+                        if (userProgress.modulesCompleted.length === 1) {
+                            unlockAchievement('first_module');
+                        }
+                        
+                        // Achievement: all modules
+                        if (userProgress.modulesCompleted.length === MODULES_DATA.length) {
+                            unlockAchievement('all_modules');
+                        }
+                    }
+                }
+                
+                saveUserProgress();
+                openModule(moduleId); // Refresh
+                renderModules();
+            }
+        }
+        
+        function startQuiz(moduleId) {
+            const module = MODULES_DATA.find(m => m.id === moduleId);
+            if (!module) return;
+            
+            // Check if all sections read
+            const sectionsRead = userProgress.sectionsRead[moduleId] || [];
+            if (sectionsRead.length < module.sections.length) {
+                alert('Debes leer todas las secciones primero.');
+                return;
+            }
+            
+            currentQuiz = {
+                moduleId: moduleId,
+                questions: module.quiz,
+                currentQuestion: 0,
+                answers: new Array(module.quiz.length).fill(null)
+            };
+            
+            closeModal();
+            document.getElementById('quiz-modal').classList.remove('hidden');
+            document.getElementById('quiz-total').textContent = module.quiz.length;
+            
+            renderQuestion();
+        }
+        
+        function renderQuestion() {
+            const quiz = currentQuiz;
+            const question = quiz.questions[quiz.currentQuestion];
+            const content = document.getElementById('quiz-content');
+            
+            document.getElementById('quiz-current').textContent = quiz.currentQuestion + 1;
+            document.getElementById('quiz-progress').style.width = `${((quiz.currentQuestion + 1) / quiz.questions.length) * 100}%`;
+            
+            content.innerHTML = `
+                <h3 class="text-lg font-semibold mb-4">${question.question}</h3>
+                <div class="space-y-3">
+                    ${question.options.map((option, index) => `
+                        <button onclick="selectAnswer(${index})" 
+                                class="quiz-option w-full p-4 text-left rounded-lg border border-gray-600 hover:border-indigo-500 transition ${quiz.answers[quiz.currentQuestion] === index ? 'selected' : ''}">
+                            <span class="inline-block w-8 h-8 rounded-full bg-gray-700 text-center leading-8 mr-3">${String.fromCharCode(65 + index)}</span>
+                            ${option}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Update navigation buttons
+            document.getElementById('quiz-back').classList.toggle('hidden', quiz.currentQuestion === 0);
+            
+            const nextBtn = document.getElementById('quiz-next');
+            if (quiz.currentQuestion === quiz.questions.length - 1) {
+                nextBtn.textContent = 'Finalizar ✓';
+                nextBtn.onclick = finishQuiz;
+            } else {
+                nextBtn.textContent = 'Siguiente →';
+                nextBtn.onclick = nextQuestion;
+            }
+        }
+        
+        function selectAnswer(index) {
+            currentQuiz.answers[currentQuiz.currentQuestion] = index;
+            renderQuestion();
+        }
+        
+        function prevQuestion() {
+            if (currentQuiz.currentQuestion > 0) {
+                currentQuiz.currentQuestion--;
+                renderQuestion();
+            }
+        }
+        
+        function nextQuestion() {
+            if (currentQuiz.answers[currentQuiz.currentQuestion] === null) {
+                alert('Por favor selecciona una respuesta.');
+                return;
+            }
+            
+            if (currentQuiz.currentQuestion < currentQuiz.questions.length - 1) {
+                currentQuiz.currentQuestion++;
+                renderQuestion();
+            }
+        }
+        
+        function finishQuiz() {
+            if (currentQuiz.answers[currentQuiz.currentQuestion] === null) {
+                alert('Por favor selecciona una respuesta.');
+                return;
+            }
+            
+            // Calculate score
+            let correct = 0;
+            currentQuiz.questions.forEach((q, i) => {
+                if (currentQuiz.answers[i] === q.correct) {
+                    correct++;
+                }
+            });
+            
+            const score = (correct / currentQuiz.questions.length) * 100;
+            const passed = score >= 70;
+            
+            // Show results
+            const content = document.getElementById('quiz-content');
+            content.innerHTML = `
+                <div class="text-center py-8">
+                    <div class="text-6xl mb-4">${passed ? '🎉' : '😢'}</div>
+                    <h3 class="text-2xl font-bold mb-2">${passed ? '¡Felicidades!' : 'Sigue intentando'}</h3>
+                    <p class="text-gray-400 mb-6">
+                        Obtuviste ${correct} de ${currentQuiz.questions.length} correctas (${Math.round(score)}%)
+                    </p>
+                    
+                    ${passed ? `
+                        <div class="bg-green-500/20 rounded-xl p-4 mb-6">
+                            <span class="text-green-400">+50 XP por completar el quiz</span>
+                        </div>
+                    ` : `
+                        <p class="text-gray-400 text-sm mb-6">Necesitas al menos 70% para aprobar. ¡Revisa el contenido e inténtalo de nuevo!</p>
+                    `}
+                    
+                    <div class="flex gap-4 justify-center">
+                        <button onclick="closeQuiz()" class="px-6 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition">
+                            Cerrar
+                        </button>
+                        ${!passed ? `
+                            <button onclick="retryQuiz()" class="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition">
+                                Reintentar
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Hide navigation
+            document.getElementById('quiz-back').classList.add('hidden');
+            document.getElementById('quiz-next').classList.add('hidden');
+            
+            if (passed) {
+                // Mark quiz as passed
+                if (!userProgress.quizzesPassed.includes(currentQuiz.moduleId)) {
+                    userProgress.quizzesPassed.push(currentQuiz.moduleId);
+                    addXP(50);
+                    
+                    // Achievement: first quiz
+                    if (userProgress.quizzesPassed.length === 1) {
+                        unlockAchievement('first_quiz');
+                    }
+                    
+                    // Achievement: perfect score
+                    if (score === 100) {
+                        unlockAchievement('perfect_quiz');
+                    }
+                    
+                    // Achievement: all quizzes
+                    if (userProgress.quizzesPassed.length === MODULES_DATA.length) {
+                        unlockAchievement('all_quizzes');
+                    }
+                    
+                    saveUserProgress();
+                    renderModules();
+                }
+                
+                // Confetti!
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+        
+        function closeQuiz() {
+            document.getElementById('quiz-modal').classList.add('hidden');
+            document.getElementById('quiz-next').classList.remove('hidden');
+        }
+        
+        function retryQuiz() {
+            currentQuiz.currentQuestion = 0;
+            currentQuiz.answers = new Array(currentQuiz.questions.length).fill(null);
+            document.getElementById('quiz-next').classList.remove('hidden');
+            renderQuestion();
+        }
+        
+        function renderAchievements() {
+            const grid = document.getElementById('achievements-grid');
+            
+            grid.innerHTML = ACHIEVEMENTS.map(ach => {
+                const unlocked = userProgress.achievements.includes(ach.id);
+                return `
+                    <div class="relative group" title="${ach.title}: ${ach.desc}">
+                        <div class="text-3xl ${unlocked ? '' : 'grayscale opacity-30'} transition hover:scale-110 cursor-pointer">
+                            ${ach.icon}
+                        </div>
+                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-10">
+                            <div class="font-semibold">${ach.title}</div>
+                            <div class="text-gray-400">${ach.desc}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function unlockAchievement(achievementId) {
+            if (userProgress.achievements.includes(achievementId)) return;
+            
+            userProgress.achievements.push(achievementId);
+            saveUserProgress();
+            
+            const ach = ACHIEVEMENTS.find(a => a.id === achievementId);
+            if (!ach) return;
+            
+            // Show popup
+            const popup = document.getElementById('achievement-popup');
+            document.getElementById('achievement-icon').textContent = ach.icon;
+            document.getElementById('achievement-title').textContent = ach.title;
+            document.getElementById('achievement-desc').textContent = ach.desc;
+            
+            popup.classList.remove('hidden');
+            
+            // Confetti
+            confetti({
+                particleCount: 50,
+                spread: 60,
+                origin: { x: 0.9, y: 0.1 }
+            });
+            
+            // Hide after 4 seconds
+            setTimeout(() => {
+                popup.classList.add('hidden');
+            }, 4000);
+            
+            renderAchievements();
+        }
+        
+        let factsRead = 0;
+        function loadRandomFact() {
+            const fact = FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
+            document.getElementById('random-fact').textContent = fact;
+            
+            factsRead++;
+            if (factsRead >= 10) {
+                unlockAchievement('curious');
+            }
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserProgress();
+            renderModules();
+            renderAchievements();
+            loadRandomFact();
+        });
+    </script>
+</body>
+</html>
